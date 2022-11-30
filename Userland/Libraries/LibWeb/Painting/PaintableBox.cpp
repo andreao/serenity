@@ -7,7 +7,10 @@
 #include <AK/GenericShorthands.h>
 #include <LibUnicode/CharacterTypes.h>
 #include <LibWeb/DOM/Document.h>
+#include <LibWeb/DOM/ShadowRoot.h>
+#include <LibWeb/HTML/HTMLButtonElement.h>
 #include <LibWeb/HTML/HTMLHtmlElement.h>
+#include <LibWeb/HTML/HTMLLabelElement.h>
 #include <LibWeb/Layout/BlockContainer.h>
 #include <LibWeb/Layout/InitialContainingBlock.h>
 #include <LibWeb/Painting/BackgroundPainting.h>
@@ -698,6 +701,21 @@ Optional<HitTestResult> PaintableWithLines::hit_test(Gfx::FloatPoint const& posi
                 if (is<Layout::BlockContainer>(fragment.layout_node()) && fragment.layout_node().paintable())
                     return fragment.layout_node().paintable()->hit_test(position, type);
                 return HitTestResult { *fragment.layout_node().paintable(), fragment.text_index_at(position.x()) };
+            }
+
+            // Don't test input text elements for text cursor hit
+            // FIXME: There should be a better way to know if a fragment comes from an input element, perhaps stored on the fragment
+            if (fragment.layout_node().dom_node()->first_ancestor_of_type<DOM::ShadowRoot>() != nullptr) {
+                continue;
+            }
+            // Don't test text within button elements for text cursor hit
+            if (fragment.layout_node().dom_node()->first_ancestor_of_type<HTML::HTMLButtonElement>() != nullptr) {
+                continue;
+            }
+            // FIXME: Text from a label element should be tested for text cursor hit, but currently that breaks the algorithm below.
+            //  From a dump of the layout tree, it looks like labels create their own separate line boxes.
+            if (fragment.layout_node().dom_node()->first_ancestor_of_type<HTML::HTMLLabelElement>() != nullptr) {
+                continue;
             }
 
             // If we reached this point, the position is not within the fragment. However, the fragment start or end might be the place to place the cursor.
